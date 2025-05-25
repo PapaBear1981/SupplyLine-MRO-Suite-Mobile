@@ -6,33 +6,34 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/models/checkout_model.dart';
-import '../../../../core/models/user_model.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../providers/tool_providers.dart';
-import '../widgets/user_selection_field.dart';
+import '../widgets/condition_selection_field.dart';
+import '../widgets/photo_capture_widget.dart';
 
-class ToolCheckoutPage extends ConsumerStatefulWidget {
+class ToolReturnPage extends ConsumerStatefulWidget {
   final String toolId;
 
-  const ToolCheckoutPage({super.key, required this.toolId});
+  const ToolReturnPage({super.key, required this.toolId});
 
   @override
-  ConsumerState<ToolCheckoutPage> createState() => _ToolCheckoutPageState();
+  ConsumerState<ToolReturnPage> createState() => _ToolReturnPageState();
 }
 
-class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
+class _ToolReturnPageState extends ConsumerState<ToolReturnPage> {
   final _formKey = GlobalKey<FormBuilderState>();
-  UserModel? _selectedUser;
+  ToolCondition _selectedCondition = ToolCondition.good;
+  List<String> _photoUrls = [];
 
   @override
   Widget build(BuildContext context) {
     final toolDetailAsync = ref.watch(toolDetailProvider(widget.toolId));
-    final checkoutState = ref.watch(toolCheckoutProvider);
+    final returnState = ref.watch(toolReturnProvider);
     final currentUser = ref.watch(authServiceProvider).user;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Checkout Tool'),
+        title: const Text('Return Tool'),
       ),
       body: toolDetailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -52,7 +53,10 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
           ),
         ),
         data: (tool) {
-          if (!tool.isAvailable) {
+          // Check if tool can be returned by current user
+          if (!tool.isCheckedOut ||
+              currentUser == null ||
+              tool.currentCheckoutUserId != currentUser.id.toString()) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -60,11 +64,15 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
                   const Icon(Icons.block, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text(
-                    'Tool Not Available',
+                    'Cannot Return Tool',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text('This tool is currently ${tool.status.value}'),
+                  Text(
+                    tool.isCheckedOut
+                        ? 'This tool is not checked out to you'
+                        : 'This tool is not currently checked out',
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.pop(),
@@ -82,9 +90,9 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
               children: [
                 _buildToolInfo(context, tool),
                 const SizedBox(height: 24),
-                _buildCheckoutForm(context, currentUser),
+                _buildReturnForm(context),
                 const SizedBox(height: 24),
-                _buildActionButtons(context, checkoutState),
+                _buildActionButtons(context, returnState),
               ],
             ),
           );
@@ -127,24 +135,39 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Location: ${tool.location}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      if (tool.currentCheckoutDate != null)
+                        Text(
+                          'Checked out: ${DateFormat('MMM dd, yyyy HH:mm').format(tool.currentCheckoutDate!)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      if (tool.expectedReturnDate != null)
+                        Text(
+                          'Expected return: ${DateFormat('MMM dd, yyyy').format(tool.expectedReturnDate!)}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: tool.isOverdue ? Colors.red : null,
+                            fontWeight: tool.isOverdue ? FontWeight.bold : null,
+                          ),
+                        ),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: tool.isOverdue
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    border: Border.all(
+                      color: tool.isOverdue
+                          ? Colors.red.withOpacity(0.3)
+                          : Colors.blue.withOpacity(0.3),
+                    ),
                   ),
-                  child: const Text(
-                    'Available',
+                  child: Text(
+                    tool.isOverdue ? 'OVERDUE' : 'Checked Out',
                     style: TextStyle(
-                      color: Colors.green,
+                      color: tool.isOverdue ? Colors.red : Colors.blue,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -157,7 +180,7 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
     );
   }
 
-  Widget _buildCheckoutForm(BuildContext context, UserModel? currentUser) {
+  Widget _buildReturnForm(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -167,66 +190,45 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Checkout Details',
+                'Return Details',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
-              UserSelectionField(
-                name: 'user',
-                currentUser: currentUser,
-                onUserSelected: (user) {
+              ConditionSelectionField(
+                name: 'condition',
+                onConditionSelected: (condition) {
                   setState(() {
-                    _selectedUser = user;
+                    _selectedCondition = condition;
                   });
                 },
-              ),
-              const SizedBox(height: 16),
-              FormBuilderDateTimePicker(
-                name: 'expected_return_date',
-                decoration: const InputDecoration(
-                  labelText: 'Expected Return Date',
-                  hintText: 'Select expected return date',
-                  prefixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(),
-                ),
-                inputType: InputType.date,
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365)),
-                validator: FormBuilderValidators.compose([
-                  FormBuilderValidators.required(),
-                  (value) {
-                    if (value != null && value.isBefore(DateTime.now())) {
-                      return 'Return date must be in the future';
-                    }
-                    return null;
-                  },
-                ]),
-              ),
-              const SizedBox(height: 16),
-              FormBuilderTextField(
-                name: 'purpose',
-                decoration: const InputDecoration(
-                  labelText: 'Purpose (Optional)',
-                  hintText: 'Enter the purpose for checking out this tool',
-                  prefixIcon: Icon(Icons.work_outline),
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-                maxLength: 200,
               ),
               const SizedBox(height: 16),
               FormBuilderTextField(
                 name: 'notes',
                 decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  hintText: 'Any additional notes or comments',
+                  labelText: 'Return Notes',
+                  hintText: 'Any notes about the tool condition or usage',
                   prefixIcon: Icon(Icons.note),
                   border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
+                maxLines: 4,
                 maxLength: 500,
+                validator: _selectedCondition == ToolCondition.damaged ||
+                        _selectedCondition == ToolCondition.needsMaintenance
+                    ? FormBuilderValidators.required(
+                        errorText: 'Please provide details about the condition',
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              PhotoCaptureWidget(
+                onPhotosChanged: (photos) {
+                  setState(() {
+                    _photoUrls = photos;
+                  });
+                },
               ),
             ],
           ),
@@ -235,10 +237,10 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, checkoutState) {
+  Widget _buildActionButtons(BuildContext context, returnState) {
     return Column(
       children: [
-        if (checkoutState.error != null)
+        if (returnState.error != null)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -254,14 +256,14 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    checkoutState.error!,
+                    returnState.error!,
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
               ],
             ),
           ),
-        if (checkoutState.successMessage != null)
+        if (returnState.successMessage != null)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -277,7 +279,7 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    checkoutState.successMessage!,
+                    returnState.successMessage!,
                     style: const TextStyle(color: Colors.green),
                   ),
                 ),
@@ -288,7 +290,7 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: checkoutState.isLoading ? null : () => context.pop(),
+                onPressed: returnState.isLoading ? null : () => context.pop(),
                 child: const Text('Cancel'),
               ),
             ),
@@ -296,14 +298,14 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
             Expanded(
               flex: 2,
               child: ElevatedButton(
-                onPressed: checkoutState.isLoading ? null : _handleCheckout,
-                child: checkoutState.isLoading
+                onPressed: returnState.isLoading ? null : _handleReturn,
+                child: returnState.isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Checkout Tool'),
+                    : const Text('Return Tool'),
               ),
             ),
           ],
@@ -312,29 +314,19 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
     );
   }
 
-  Future<void> _handleCheckout() async {
+  Future<void> _handleReturn() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
 
-      if (_selectedUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a user for checkout'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final request = CheckoutRequest(
+      final request = ReturnRequest(
         toolId: widget.toolId,
-        userId: _selectedUser!.id.toString(),
-        expectedReturnDate: formData['expected_return_date'] as DateTime,
-        purpose: formData['purpose'] as String?,
+        checkoutId: 'current', // This would be the actual checkout ID in a real implementation
+        condition: _selectedCondition,
         notes: formData['notes'] as String?,
+        photoUrls: _photoUrls.isNotEmpty ? _photoUrls : null,
       );
 
-      final success = await ref.read(toolCheckoutProvider.notifier).checkoutTool(request);
+      final success = await ref.read(toolReturnProvider.notifier).returnTool(request);
 
       if (success) {
         // Show confirmation dialog
@@ -343,16 +335,24 @@ class _ToolCheckoutPageState extends ConsumerState<ToolCheckoutPage> {
             context: context,
             barrierDismissible: false,
             builder: (context) => AlertDialog(
-              title: const Text('Checkout Successful'),
+              title: const Text('Return Successful'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.check_circle, color: Colors.green, size: 48),
                   const SizedBox(height: 16),
-                  Text(
-                    'Tool has been successfully checked out to ${_selectedUser!.fullName}',
+                  const Text(
+                    'Tool has been successfully returned',
                     textAlign: TextAlign.center,
                   ),
+                  if (_selectedCondition != ToolCondition.good) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Condition: ${_selectedCondition.displayName}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ],
               ),
               actions: [

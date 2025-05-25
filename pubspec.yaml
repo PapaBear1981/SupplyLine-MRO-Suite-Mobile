@@ -35,18 +35,18 @@ dependencies:
   # Authentication
   jwt_decoder: ^2.0.1
 
-  # QR Code and Barcode
-  qr_code_scanner: ^1.0.1
+  # QR Code and Barcode - Temporarily disabled for web testing
+  # qr_code_scanner: ^1.0.1
   barcode_widget: ^2.0.3
 
-  # Camera and Image
-  camera: ^0.10.5+5
-  image_picker: ^1.0.4
+  # Camera and Image - Temporarily disabled for web testing
+  # camera: ^0.10.5+5
+  # image_picker: ^1.0.4
 
   # Utilities
   intl: ^0.18.1
   uuid: ^4.1.0
-  connectivity_plus: ^4.0.2
+  # connectivity_plus: ^4.0.2  # Temporarily disabled for web testing
 
   # Loading and Progress
   flutter_spinkit: ^5.2.0
@@ -55,13 +55,13 @@ dependencies:
   flutter_form_builder: ^9.1.1
   form_builder_validators: ^9.1.0
 
-  # Firebase and Analytics
-  firebase_core: ^2.15.1
-  firebase_crashlytics: ^3.3.5
-  firebase_analytics: ^10.4.5
+  # Firebase and Analytics - Temporarily disabled for web testing
+  # firebase_core: ^2.15.1
+  # firebase_crashlytics: ^3.3.5
+  # firebase_analytics: ^10.4.5
 
-  # Performance Monitoring
-  firebase_performance: ^0.9.2+3
+  # Performance Monitoring - Temporarily disabled for web testing
+  # firebase_performance: ^0.9.2+3
 
   # Logging
   logger: ^2.0.2+1
@@ -80,9 +80,9 @@ flutter:
     - assets/images/
     - assets/icons/
 
-  fonts:
-    - family: Roboto
-      fonts:
-        - asset: fonts/Roboto-Regular.ttf
-        - asset: fonts/Roboto-Bold.ttf
-          weight: 700
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: fonts/Roboto-Regular.ttf
+  #       - asset: fonts/Roboto-Bold.ttf
+  #         weight: 700
