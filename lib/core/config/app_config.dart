@@ -1,9 +1,34 @@
+enum Environment { development, staging, production }
+
 class AppConfig {
+  static Environment _environment = Environment.development;
+
+  // Environment Configuration
+  static Environment get environment => _environment;
+
+  static void setEnvironment(Environment env) {
+    _environment = env;
+  }
+
   // API Configuration - Primary backend communication
-  static const String baseUrl = 'http://localhost:5000'; // Development URL
-  static const String productionUrl = 'https://your-production-server.com'; // Production URL
+  static String get baseUrl {
+    switch (_environment) {
+      case Environment.development:
+        return 'http://localhost:5000';
+      case Environment.staging:
+        return 'https://staging-api.supplyline-mro.com';
+      case Environment.production:
+        return 'https://api.supplyline-mro.com';
+    }
+  }
+
   static const String apiVersion = 'v1';
-  static const String apiBaseUrl = '$baseUrl/api/$apiVersion';
+  static String get apiBaseUrl => '$baseUrl/api/$apiVersion';
+
+  // Environment-specific settings
+  static bool get isDebugMode => _environment == Environment.development;
+  static bool get enableLogging => _environment != Environment.production;
+  static bool get enableCrashReporting => _environment == Environment.production;
 
   // Data Strategy Configuration
   static const bool preferRemoteData = true; // Always try remote first
