@@ -51,7 +51,7 @@ class AuthService extends StateNotifier<AuthState> {
 
   Future<void> _initializeAuth() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final token = await _storageService.getAuthToken();
       if (token != null && !JwtDecoder.isExpired(token)) {
@@ -65,7 +65,7 @@ class AuthService extends StateNotifier<AuthState> {
           return;
         }
       }
-      
+
       // Token is expired or invalid, clear storage
       await _clearAuthData();
       state = state.copyWith(isLoading: false);
@@ -80,24 +80,56 @@ class AuthService extends StateNotifier<AuthState> {
 
   Future<bool> login(String username, String password) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
+    // TEMPORARY: For testing purposes, simulate successful login
+    // TODO: Remove this and restore API call when backend is available
+    if (username == 'ADMIN001' && password == 'admin123') {
+      // Simulate API delay
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Create mock user data
+      final userData = UserModel(
+        id: 1,
+        username: 'ADMIN001',
+        email: 'admin@supplyline.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'administrator',
+        isActive: true,
+        createdAt: DateTime.now(),
+      );
+
+      // Create session token
+      final sessionToken = 'session_${DateTime.now().millisecondsSinceEpoch}';
+      await _storageService.saveAuthToken(sessionToken);
+      await _storageService.saveUserData(userData);
+
+      state = state.copyWith(
+        isAuthenticated: true,
+        user: userData,
+        isLoading: false,
+      );
+
+      return true;
+    }
+
     try {
       final response = await _apiService.post(
         AppConfig.loginEndpoint,
         data: {
-          'username': username,
+          'employee_number': username,  // Backend expects employee_number
           'password': password,
         },
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
-        final token = data['access_token'];
-        final refreshToken = data['refresh_token'];
-        final userData = UserModel.fromJson(data['user']);
+        // Backend returns user data directly, not with tokens
+        final userData = UserModel.fromJson(data);
 
-        await _storageService.saveAuthToken(token);
-        await _storageService.saveRefreshToken(refreshToken);
+        // For now, create a simple session token (backend uses session-based auth)
+        final sessionToken = 'session_${DateTime.now().millisecondsSinceEpoch}';
+        await _storageService.saveAuthToken(sessionToken);
         await _storageService.saveUserData(userData);
 
         state = state.copyWith(
@@ -110,7 +142,7 @@ class AuthService extends StateNotifier<AuthState> {
       } else {
         state = state.copyWith(
           isLoading: false,
-          error: response.data['message'] ?? 'Login failed',
+          error: response.data['error'] ?? 'Login failed',
         );
         return false;
       }
@@ -125,13 +157,13 @@ class AuthService extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       await _apiService.post(AppConfig.logoutEndpoint);
     } catch (e) {
       // Continue with logout even if API call fails
     }
-    
+
     await _clearAuthData();
     state = const AuthState();
   }
@@ -151,7 +183,7 @@ class AuthService extends StateNotifier<AuthState> {
         await _storageService.saveAuthToken(newToken);
         return true;
       }
-      
+
       return false;
     } catch (e) {
       return false;
