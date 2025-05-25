@@ -8,6 +8,7 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/tools/presentation/pages/tools_list_page.dart';
 import '../../features/tools/presentation/pages/tool_detail_page.dart';
 import '../../features/tools/presentation/pages/tool_checkout_page.dart';
+import '../../features/tools/presentation/pages/tool_return_page.dart';
 import '../../features/tools/presentation/pages/qr_scanner_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
@@ -15,24 +16,24 @@ import '../services/auth_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
-  
+
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
       final isLoggedIn = authService.isAuthenticated;
-      final isLoggingIn = state.location == '/login';
-      final isSplash = state.location == '/splash';
-      
+      final isLoggingIn = state.uri.toString() == '/login';
+      final isSplash = state.uri.toString() == '/splash';
+
       // If not logged in and not on login or splash page, redirect to login
       if (!isLoggedIn && !isLoggingIn && !isSplash) {
         return '/login';
       }
-      
+
       // If logged in and on login page, redirect to dashboard
       if (isLoggedIn && isLoggingIn) {
         return '/dashboard';
       }
-      
+
       return null;
     },
     routes: [
@@ -72,6 +73,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               return ToolCheckoutPage(toolId: toolId);
             },
           ),
+          GoRoute(
+            path: '/return/:toolId',
+            name: 'tool-return',
+            builder: (context, state) {
+              final toolId = state.pathParameters['toolId']!;
+              return ToolReturnPage(toolId: toolId);
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -99,7 +108,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Icon(Icons.error, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Page not found: ${state.location}',
+              'Page not found: ${state.uri.toString()}',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
