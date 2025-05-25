@@ -88,6 +88,23 @@ class ToolService {
   /// Get tools with pagination and filtering
   Future<ToolsResponse> getTools(ToolFilters filters) async {
     try {
+      // TEMPORARY: For testing purposes, return mock data
+      // TODO: Remove this and restore API call when backend is available
+      await Future.delayed(const Duration(milliseconds: 800)); // Simulate network delay
+
+      final mockTools = _generateMockTools(filters);
+      final mockPagination = PaginationModel(
+        currentPage: filters.page,
+        totalPages: 3,
+        totalItems: 45,
+        itemsPerPage: filters.limit,
+      );
+
+      return ToolsResponse(
+        tools: mockTools,
+        pagination: mockPagination,
+      );
+
       // Check cache first
       final cacheKey = '${_cacheKeyPrefix}${_generateCacheKey(filters)}';
       final cachedData = await _getCachedData(cacheKey);
@@ -103,10 +120,10 @@ class ToolService {
 
       if (response.data['success'] == true) {
         final toolsResponse = ToolsResponse.fromJson(response.data);
-        
+
         // Cache the response
         await _cacheData(cacheKey, response.data);
-        
+
         return toolsResponse;
       } else {
         throw Exception(response.data['message'] ?? 'Failed to fetch tools');
@@ -121,6 +138,22 @@ class ToolService {
   /// Search tools with specific query
   Future<List<ToolModel>> searchTools(String query) async {
     try {
+      // TEMPORARY: For testing purposes, return filtered mock data
+      // TODO: Remove this and restore API call when backend is available
+      await Future.delayed(const Duration(milliseconds: 300)); // Simulate network delay
+
+      final allMockTools = _generateMockTools(const ToolFilters(limit: 100)); // Get all tools
+      final searchLower = query.toLowerCase();
+
+      final filteredTools = allMockTools.where((tool) {
+        return tool.name.toLowerCase().contains(searchLower) ||
+               tool.description.toLowerCase().contains(searchLower) ||
+               (tool.serialNumber?.toLowerCase().contains(searchLower) ?? false) ||
+               tool.qrCode.toLowerCase().contains(searchLower);
+      }).take(10).toList(); // Limit search results to 10
+
+      return filteredTools;
+
       final response = await _apiService.get(
         '/tools/search',
         queryParameters: {'q': query},
@@ -155,10 +188,10 @@ class ToolService {
 
       if (response.data['success'] == true) {
         final tool = ToolModel.fromJson(response.data['data']);
-        
+
         // Cache the tool
         await _cacheData(cacheKey, response.data);
-        
+
         return tool;
       } else {
         throw Exception(response.data['message'] ?? 'Tool not found');
@@ -173,8 +206,23 @@ class ToolService {
   /// Get available locations for filtering
   Future<List<String>> getLocations() async {
     try {
+      // TEMPORARY: For testing purposes, return mock locations
+      // TODO: Remove this and restore API call when backend is available
+      await Future.delayed(const Duration(milliseconds: 200)); // Simulate network delay
+
+      return [
+        'Hangar A - Tool Crib',
+        'Hangar B - Bay 3',
+        'Hangar C - Bay 1',
+        'Maintenance Shop',
+        'Quality Control Lab',
+        'Safety Equipment Room',
+        'Machine Shop',
+        'Propeller Shop',
+      ];
+
       final response = await _apiService.get('/tools/locations');
-      
+
       if (response.data['success'] == true) {
         return List<String>.from(response.data['data']['locations']);
       } else {
@@ -204,12 +252,12 @@ class ToolService {
       'page_${filters.page}',
       'limit_${filters.limit}',
     ];
-    
+
     if (filters.search != null) parts.add('search_${filters.search}');
     if (filters.category != null) parts.add('category_${filters.category!.value}');
     if (filters.status != null) parts.add('status_${filters.status!.value}');
     if (filters.location != null) parts.add('location_${filters.location}');
-    
+
     return parts.join('_');
   }
 
@@ -264,5 +312,162 @@ class ToolService {
       default:
         return Exception('Network error: ${e.message}');
     }
+  }
+
+  /// Generate mock tools for testing
+  List<ToolModel> _generateMockTools(ToolFilters filters) {
+    final allMockTools = [
+      ToolModel(
+        id: '1',
+        name: 'Digital Torque Wrench',
+        description: 'High-precision digital torque wrench with LCD display',
+        category: ToolCategory.handTools,
+        status: ToolStatus.available,
+        location: 'Hangar A - Tool Crib',
+        qrCode: 'TW001',
+        serialNumber: 'DT-2023-001',
+        specifications: ToolSpecifications(
+          range: '10-200 Nm',
+          accuracy: '±2%',
+          weight: '1.2 kg',
+        ),
+        calibration: ToolCalibration(
+          lastDate: DateTime.now().subtract(const Duration(days: 90)),
+          nextDate: DateTime.now().add(const Duration(days: 275)),
+          isCalibrationRequired: true,
+        ),
+        createdAt: DateTime.now().subtract(const Duration(days: 365)),
+      ),
+      ToolModel(
+        id: '2',
+        name: 'CL415 Engine Hoist',
+        description: 'Specialized engine hoist for CL415 aircraft maintenance',
+        category: ToolCategory.cl415,
+        status: ToolStatus.checkedOut,
+        location: 'Hangar B - Bay 3',
+        qrCode: 'EH415-001',
+        serialNumber: 'CL415-EH-2022-003',
+        createdAt: DateTime.now().subtract(const Duration(days: 200)),
+      ),
+      ToolModel(
+        id: '3',
+        name: 'Pneumatic Drill',
+        description: 'Heavy-duty pneumatic drill for aircraft maintenance',
+        category: ToolCategory.powerTools,
+        status: ToolStatus.maintenance,
+        location: 'Maintenance Shop',
+        qrCode: 'PD001',
+        serialNumber: 'PD-2023-007',
+        createdAt: DateTime.now().subtract(const Duration(days: 150)),
+      ),
+      ToolModel(
+        id: '4',
+        name: 'Precision Micrometer Set',
+        description: 'Set of precision micrometers 0-25mm, 25-50mm, 50-75mm',
+        category: ToolCategory.measuring,
+        status: ToolStatus.available,
+        location: 'Quality Control Lab',
+        qrCode: 'MIC001',
+        serialNumber: 'PM-SET-2023-012',
+        specifications: ToolSpecifications(
+          range: '0-75mm',
+          accuracy: '±0.001mm',
+        ),
+        calibration: ToolCalibration(
+          lastDate: DateTime.now().subtract(const Duration(days: 30)),
+          nextDate: DateTime.now().add(const Duration(days: 335)),
+          isCalibrationRequired: true,
+        ),
+        createdAt: DateTime.now().subtract(const Duration(days: 300)),
+      ),
+      ToolModel(
+        id: '5',
+        name: 'RJ85 Landing Gear Jack',
+        description: 'Hydraulic jack specifically designed for RJ85 landing gear',
+        category: ToolCategory.rj85,
+        status: ToolStatus.inService,
+        location: 'Hangar C - Bay 1',
+        qrCode: 'LGJ85-001',
+        serialNumber: 'RJ85-LGJ-2021-005',
+        createdAt: DateTime.now().subtract(const Duration(days: 400)),
+      ),
+      ToolModel(
+        id: '6',
+        name: 'Safety Harness',
+        description: 'Full body safety harness with shock absorbing lanyard',
+        category: ToolCategory.safety,
+        status: ToolStatus.available,
+        location: 'Safety Equipment Room',
+        qrCode: 'SH001',
+        serialNumber: 'SH-2023-025',
+        createdAt: DateTime.now().subtract(const Duration(days: 100)),
+      ),
+      ToolModel(
+        id: '7',
+        name: 'CNC Mill Cutting Tools',
+        description: 'Set of carbide cutting tools for CNC milling operations',
+        category: ToolCategory.cnc,
+        status: ToolStatus.available,
+        location: 'Machine Shop',
+        qrCode: 'CNC001',
+        serialNumber: 'CNC-CT-2023-018',
+        createdAt: DateTime.now().subtract(const Duration(days: 80)),
+      ),
+      ToolModel(
+        id: '8',
+        name: 'Q400 Propeller Balancer',
+        description: 'Dynamic propeller balancing equipment for Q400 aircraft',
+        category: ToolCategory.q400,
+        status: ToolStatus.outOfService,
+        location: 'Propeller Shop',
+        qrCode: 'PB400-001',
+        serialNumber: 'Q400-PB-2020-002',
+        calibration: ToolCalibration(
+          lastDate: DateTime.now().subtract(const Duration(days: 400)),
+          nextDate: DateTime.now().subtract(const Duration(days: 35)),
+          isCalibrationRequired: true,
+        ),
+        createdAt: DateTime.now().subtract(const Duration(days: 500)),
+      ),
+    ];
+
+    // Apply filters
+    var filteredTools = allMockTools.where((tool) {
+      if (filters.search != null && filters.search!.isNotEmpty) {
+        final searchLower = filters.search!.toLowerCase();
+        return tool.name.toLowerCase().contains(searchLower) ||
+               tool.description.toLowerCase().contains(searchLower) ||
+               (tool.serialNumber?.toLowerCase().contains(searchLower) ?? false);
+      }
+      return true;
+    }).where((tool) {
+      if (filters.category != null) {
+        return tool.category == filters.category;
+      }
+      return true;
+    }).where((tool) {
+      if (filters.status != null) {
+        return tool.status == filters.status;
+      }
+      return true;
+    }).where((tool) {
+      if (filters.location != null && filters.location!.isNotEmpty) {
+        return tool.location.toLowerCase().contains(filters.location!.toLowerCase());
+      }
+      return true;
+    }).toList();
+
+    // Apply pagination
+    final startIndex = (filters.page - 1) * filters.limit;
+    final endIndex = startIndex + filters.limit;
+
+    if (startIndex >= filteredTools.length) {
+      return [];
+    }
+
+    return filteredTools.sublist(
+      startIndex,
+      endIndex > filteredTools.length ? filteredTools.length : endIndex,
+    );
   }
 }
