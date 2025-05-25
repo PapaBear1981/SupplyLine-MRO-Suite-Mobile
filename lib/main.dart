@@ -9,7 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/auth_service.dart';
-import 'core/services/firebase_service.dart';
+// import 'core/services/firebase_service.dart';  // Temporarily disabled
 import 'core/services/logging_service.dart';
 
 void main() async {
@@ -22,8 +22,8 @@ void main() async {
   LoggingService.initialize();
   LoggingService.info('🚀 Starting SupplyLine MRO Suite Mobile App');
 
-  // Initialize Firebase services
-  await FirebaseService.initialize();
+  // Initialize Firebase services - Temporarily disabled
+  // await FirebaseService.initialize();
 
   // Initialize Hive for local storage
   await Hive.initFlutter();

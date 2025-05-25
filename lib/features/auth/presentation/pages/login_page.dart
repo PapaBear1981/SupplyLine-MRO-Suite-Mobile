@@ -89,17 +89,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 48),
 
-                // Username Field
+                // Employee Number Field
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: Icon(Icons.person),
+                    labelText: 'Employee Number',
+                    prefixIcon: Icon(Icons.badge),
                   ),
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your username';
+                      return 'Please enter your employee number';
                     }
                     return null;
                   },

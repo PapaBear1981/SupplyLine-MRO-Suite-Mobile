@@ -22,8 +22,8 @@ class AppConfig {
     }
   }
 
-  static const String apiVersion = 'v1';
-  static String get apiBaseUrl => '$baseUrl/api/$apiVersion';
+  static const String apiVersion = '';  // No version prefix needed
+  static String get apiBaseUrl => '$baseUrl/api';
 
   // Environment-specific settings
   static bool get isDebugMode => _environment == Environment.development;

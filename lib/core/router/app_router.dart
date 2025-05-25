@@ -15,24 +15,24 @@ import '../services/auth_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
-  
+
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
       final isLoggedIn = authService.isAuthenticated;
-      final isLoggingIn = state.location == '/login';
-      final isSplash = state.location == '/splash';
-      
+      final isLoggingIn = state.uri.toString() == '/login';
+      final isSplash = state.uri.toString() == '/splash';
+
       // If not logged in and not on login or splash page, redirect to login
       if (!isLoggedIn && !isLoggingIn && !isSplash) {
         return '/login';
       }
-      
+
       // If logged in and on login page, redirect to dashboard
       if (isLoggedIn && isLoggingIn) {
         return '/dashboard';
       }
-      
+
       return null;
     },
     routes: [
@@ -57,7 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ToolsListPage(),
         routes: [
           GoRoute(
-            path: '/detail/:toolId',
+            path: 'detail/:toolId',
             name: 'tool-detail',
             builder: (context, state) {
               final toolId = state.pathParameters['toolId']!;
@@ -65,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
-            path: '/checkout/:toolId',
+            path: 'checkout/:toolId',
             name: 'tool-checkout',
             builder: (context, state) {
               final toolId = state.pathParameters['toolId']!;
@@ -99,7 +99,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Icon(Icons.error, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Page not found: ${state.location}',
+              'Page not found: ${state.uri.toString()}',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
